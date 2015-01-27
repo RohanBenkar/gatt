@@ -15,6 +15,11 @@ import (
 
 type XPC struct {
 	conn C.xpc_connection_t
+
+}
+
+type uuid struct {
+	b []byte
 }
 
 func (x *XPC) Send(msg interface{}, verbose bool) {
@@ -87,72 +92,15 @@ func (d Dict) GetInt(k string, defv int) int {
 	}
 }
 
-func (d dict) GetUUID(k string) UUID {
-	return GetUUID(d[k])
-}
-
 // an array of things
 type Array []interface{}
-
-func (a array) GetUUID(k int) UUID {
-	return GetUUID(a[k])
-}
-
-// a UUID
-type UUID [16]byte
-
-func MakeUUID(s string) UUID {
-	var sl []byte
-	fmt.Sscanf(s, "%32x", &sl)
-
-	var uuid [16]byte
-	copy(uuid[:], sl)
-	return UUID(uuid)
-}
-
-func (uuid UUID) String() string {
-	return fmt.Sprintf("%x", [16]byte(uuid))
-}
-
-func GetUUID(v interface{}) UUID {
-	if v == nil {
-		return UUID{}
-	}
-
-	if uuid, ok := v.(UUID); ok {
-		return uuid
-	}
-
-	if bytes, ok := v.([]byte); ok {
-		uuid := UUID{}
-
-		for i, b := range bytes {
-			uuid[i] = b
-		}
-
-		return uuid
-	}
-
-	if bytes, ok := v.([]uint8); ok {
-		uuid := UUID{}
-
-		for i, b := range bytes {
-			uuid[i] = b
-		}
-
-		return uuid
-	}
-
-	log.Fatalf("invalid type for UUID: %#v", v)
-	return UUID{}
-}
 
 var (
 	CONNECTION_INVALID     = errors.New("connection invalid")
 	CONNECTION_INTERRUPTED = errors.New("connection interrupted")
 	CONNECTION_TERMINATED  = errors.New("connection terminated")
 
-	TYPE_OF_UUID  = r.TypeOf(UUID{})
+	TYPE_OF_UUID  = r.TypeOf([]byte{})
 	TYPE_OF_BYTES = r.TypeOf([]byte{})
 )
 
@@ -235,10 +183,10 @@ func valueToXpc(val r.Value) C.xpc_object_t {
 
 	case r.Array, r.Slice:
 		if val.Type() == TYPE_OF_UUID {
-			// array of bytes
-			var uuid [16]byte
-			r.Copy(r.ValueOf(uuid[:]), val)
-			xv = C.xpc_uuid_create(C.ptr_to_uuid(unsafe.Pointer(&uuid[0])))
+			// Array of bytes
+			var u [16]byte
+			r.Copy(r.ValueOf(u[:]), val)
+			xv = C.xpc_uuid_create(C.ptr_to_uuid(unsafe.Pointer(&u[0])))
 		} else if val.Type() == TYPE_OF_BYTES {
 			// slice of bytes
 			xv = C.xpc_data_create(unsafe.Pointer(val.Pointer()), C.size_t(val.Len()))
@@ -306,7 +254,7 @@ func xpcToGo(v C.xpc_object_t) interface{} {
 	case C.TYPE_UUID:
 		a := [16]byte{}
 		C.XpcUUIDGetBytes(unsafe.Pointer(&a), v)
-		return UUID(a)
+		return uuid{a[:]}
 
 	default:
 		log.Fatalf("unexpected type %#v, value %#v", t, v)
