@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
+	"time"
 
 	"github.com/paypal/gatt"
 	"github.com/paypal/gatt/examples/option"
@@ -111,7 +113,6 @@ func main() {
 			d.AdvertiseNameAndServices("Wonka", []gatt.UUID{svc.UUID()})
 		}
 	}
-
 	d.Init(onStateChanged)
 
 	for {
@@ -122,6 +123,13 @@ func main() {
 				return
 			}
 			log.Printf("[%d] % X", num, raw)
+			// write to file
+
+			err := ioutil.WriteFile("data_"+time.Now().Format("150405"), raw, 0644)
+			if err != nil {
+				log.Printf("failed to write file %s", err)
+			}
+
 			// echo back
 			wc.WriteStream(raw, num)
 		}
