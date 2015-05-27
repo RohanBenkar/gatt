@@ -108,7 +108,7 @@ func (wc *wonkaConn) Close() {
 }
 
 func (wc *wonkaConn) currentChunkSize() int {
-	return wc.gc.MTU() - 3 - headerSize // FIXME
+	return wc.gc.MTU() - headerSize // FIXME
 }
 
 // func (wc *wonkaConn) Timer() *syncutil.Timer {
